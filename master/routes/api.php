@@ -32,3 +32,11 @@ Route::get('/v1/users', function (Request $request) {
         ]
     ]);
 });
+
+Route::post('/v1/users', function (Request $request) {
+    return [
+        "status"=>200,
+        "message"=>"success",
+        "data"=> $request->all()
+        ];
+});

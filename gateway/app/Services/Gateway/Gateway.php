@@ -9,18 +9,33 @@ class Gateway
 
     private string $prefix;
     private string $endPoint;
+    private mixed $url;
+    private mixed $method;
+    private mixed $requestData;
 
-    public function handle($prefix)
+    public function __construct()
     {
-        $this->detachingUrl($prefix);
-        $response = $this->call();
-        dd($response->json());
+        $this->url = $_SERVER['REQUEST_URI'];
+        $this->method = $_SERVER['REQUEST_METHOD'];
+        $this->client = Http::acceptJson();
     }
 
-    private function detachingUrl($prefix)
+    public function handle($requestData, $verify = false)
     {
-        $parts = explode('/', $prefix);
-//        remove empty string
+        $this->requestData = $requestData;
+        $this->detachingUrl();
+
+        if (!$verify) {
+            $this->client = $this->client->withoutVerifying();
+        }
+
+        return $this->call();
+    }
+
+    private function detachingUrl(): void
+    {
+        $parts = explode('/', $this->url);
+        // remove empty string
         $parts = array_values(array_filter($parts));
         if (count($parts) < 3) {
             $this->prefix = $parts[1];
@@ -32,7 +47,16 @@ class Gateway
     {
         try {
             $api = $this->getApi();
-            return Http::withoutVerifying()->get($api);
+
+            $response = match (strtolower($this->method)) {
+                'post' => $this->client->post($api, $this->requestData),
+                'put' => $this->client->put($api, $this->requestData),
+                'delete' => $this->client->delete($api),
+                default => $this->client->get($api),
+            };
+
+            return $response->json();
+
         } catch (\Exception $exception) {
             return $exception->getMessage();
         }
@@ -48,7 +72,7 @@ class Gateway
     {
         return match ($this->endPoint) {
             'users', 'projects' => (object)(["alias" => "master-alias", "port" => 8001]),
-            default => 500,
+            default => throw new \Exception("Endpoint not found"),
         };
     }
 }

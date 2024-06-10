@@ -13,11 +13,9 @@ class GatewayController extends Controller
         $this->gateWay = resolve(Gateway::class);
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $url = $_SERVER['REQUEST_URI'];
-        $response = $this->gateWay->handle($url);
-        $response = Http::withoutVerifying()->get($response);
+        $response = $this->gateWay->handle($request);
         return $response;
     }
 }
